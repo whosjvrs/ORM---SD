@@ -1,6 +1,6 @@
 package consultas.estrategia;
 
-import consultas.agenda.HorarioAtendimento;
+import consultas.modelo.HorarioAtendimento;
 
 import java.util.List;
 

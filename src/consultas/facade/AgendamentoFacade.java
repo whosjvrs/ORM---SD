@@ -1,7 +1,7 @@
 package consultas.facade;
 
 import consultas.agenda.Agenda;
-import consultas.agenda.HorarioAtendimento;
+import consultas.modelo.HorarioAtendimento;
 import consultas.app.DadosExemplo;
 import consultas.estrategia.EstrategiaOrdenacao;
 import consultas.modelo.Clinica;
@@ -25,7 +25,6 @@ public class AgendamentoFacade {
     private final ValidadorAgendamento validador;
     private final PublicadorAgendamento publicador;
     private final List<Consulta> consultas = new ArrayList<>();
-    private int proximoIdConsulta = 1;
 
     public AgendamentoFacade(DadosExemplo dados, Agenda agenda,
                              ValidadorAgendamento validador,
@@ -67,9 +66,9 @@ public class AgendamentoFacade {
         System.out.println("[Facade] Iniciando agendamento...");
         validador.validar(paciente, horario);                        // 1. Chain: lança se falhar
         agenda.reservar(horario);                                    // 2. reserva
-        Consulta consulta = new Consulta(proximoIdConsulta++, paciente, horario);
+        Consulta consulta = new Consulta(paciente, horario);
         consultas.add(consulta);                                     // 3. registra
-        System.out.println("[Facade] Consulta " + consulta.getId() + " registrada.");
+        System.out.println("[Facade] Consulta registrada.");
         publicador.notificar(consulta);                              // 4. Observer
         return consulta;
     }

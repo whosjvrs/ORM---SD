@@ -1,6 +1,6 @@
 package consultas.validacao;
 
-import consultas.agenda.HorarioAtendimento;
+import consultas.modelo.HorarioAtendimento;
 import consultas.modelo.AgendamentoException;
 import consultas.modelo.Paciente;
 

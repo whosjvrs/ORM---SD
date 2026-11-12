@@ -1,6 +1,6 @@
 package consultas.notificacao;
 
-import consultas.agenda.HorarioAtendimento;
+import consultas.modelo.HorarioAtendimento;
 import consultas.modelo.Clinica;
 import consultas.modelo.Consulta;
 import consultas.modelo.Psicologo;

@@ -1,7 +1,7 @@
 package consultas.agenda;
 
-import consultas.modelo.AgendamentoException;
 import consultas.modelo.Clinica;
+import consultas.modelo.HorarioAtendimento;
 import consultas.modelo.Psicologo;
 
 import java.time.LocalDateTime;
@@ -35,10 +35,7 @@ public class Agenda {
 
     /** Marca o horário como reservado. Protege contra reservar duas vezes. */
     public void reservar(HorarioAtendimento horario) {
-        if (horario.isReservado()) {
-            throw new AgendamentoException("Horário " + horario.getId() + " já está reservado.");
-        }
-        horario.marcarReservado();
+        horario.reservar(); // lança AgendamentoException se já estiver reservado
         System.out.println("[Agenda] Horário " + horario.getId() + " reservado.");
     }
 }

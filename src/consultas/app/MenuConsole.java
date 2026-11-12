@@ -1,6 +1,6 @@
 package consultas.app;
 
-import consultas.agenda.HorarioAtendimento;
+import consultas.modelo.HorarioAtendimento;
 import consultas.estrategia.EstrategiaOrdenacao;
 import consultas.estrategia.OrdemCronologica;
 import consultas.estrategia.PreferenciaTurno;
@@ -14,14 +14,15 @@ import consultas.modelo.Psicologo;
 import consultas.notificacao.NotificadorPaciente;
 import consultas.notificacao.PublicadorAgendamento;
 
+import consultas.app.cadastro.MenuCadastros;
+
 import java.util.List;
-import java.util.Scanner;
 
 public class MenuConsole {
     private final AgendamentoFacade facade;
     private final PublicadorAgendamento publicador;
     private final NotificadorPaciente notificador;
-    private final Scanner scanner = new Scanner(System.in); // único Scanner, nunca fechado
+    private final MenuCadastros cadastros = new MenuCadastros();
 
     public MenuConsole(AgendamentoFacade facade, PublicadorAgendamento publicador,
                        NotificadorPaciente notificador) {
@@ -39,8 +40,9 @@ public class MenuConsole {
             System.out.println("2 - Listar consultas");
             System.out.println("3 - Ligar/desligar notificação ao paciente");
             System.out.println("4 - Demonstrar validação: tentar agendar de novo o horário da última consulta");
+            System.out.println("5 - Cadastros (CRUD)");
             System.out.println("0 - Sair");
-            opcao = lerNumero("Escolha uma opção: ", 0, 4);
+            opcao = lerNumero("Escolha uma opção: ", 0, 5);
 
             try {
                 switch (opcao) {
@@ -48,6 +50,7 @@ public class MenuConsole {
                     case 2 -> listarConsultas();
                     case 3 -> alternarNotificacao();
                     case 4 -> demonstrarValidacao();
+                    case 5 -> cadastros.exibir();
                     case 0 -> System.out.println("Encerrando o sistema.");
                 }
             } catch (AgendamentoException e) {
@@ -128,8 +131,7 @@ public class MenuConsole {
         }
         System.out.println("\nConsultas registradas:");
         for (Consulta c : consultas) {
-            System.out.println("Consulta " + c.getId() + " | Paciente: " + c.getPaciente().getNome()
-                    + " | " + c.getHorario());
+            System.out.println(c);
         }
     }
 
@@ -152,24 +154,11 @@ public class MenuConsole {
             return;
         }
         Consulta ultima = consultas.get(consultas.size() - 1);
-        System.out.println("Tentando agendar de novo o horário da consulta " + ultima.getId() + "...");
+        System.out.println("Tentando agendar de novo o horário: " + ultima.getHorario());
         facade.agendar(ultima.getPaciente(), ultima.getHorario());
     }
 
-    // Lê um número entre min e max; repete a pergunta se for inválido
     private int lerNumero(String pergunta, int min, int max) {
-        while (true) {
-            System.out.print(pergunta);
-            String linha = scanner.nextLine().trim();
-            try {
-                int numero = Integer.parseInt(linha);
-                if (numero >= min && numero <= max) {
-                    return numero;
-                }
-            } catch (NumberFormatException e) {
-                // não é número: cai na mensagem abaixo
-            }
-            System.out.println("Número inválido. Digite um valor entre " + min + " e " + max + ".");
-        }
+        return Console.lerNumero(pergunta, min, max);
     }
 }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+    <persistence-unit name="clinicaPU" transaction-type="RESOURCE_LOCAL">
+        <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+
+        <class>consultas.modelo.Pessoa</class>
+        <class>consultas.modelo.Paciente</class>
+        <class>consultas.modelo.Psicologo</class>
+        <class>consultas.modelo.Clinica</class>
+        <class>consultas.modelo.Especialidade</class>
+        <class>consultas.modelo.HorarioAtendimento</class>
+        <class>consultas.modelo.Consulta</class>
+        <class>consultas.modelo.Notificacao</class>
+
+        <properties>
+            <!-- Conexão com o MySQL. Ajuste usuário e senha na sua máquina (não faça commit da sua senha). -->
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:mysql://localhost:3306/clinica_psico?createDatabaseIfNotExist=true&amp;serverTimezone=America/Sao_Paulo"/>
+            <property name="jakarta.persistence.jdbc.user" value="root"/>
+            <property name="jakarta.persistence.jdbc.password" value="12345"/>
+
+            <!-- Cria as tabelas que faltarem a partir das anotações, sem apagar os dados existentes. -->
+            <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/>
+            <property name="eclipselink.ddl-generation.output-mode" value="database"/>
+
+            <!-- Log do EclipseLink: só erros graves, para o menu ficar limpo.
+                 Para MOSTRAR O SQL gerado (bom na apresentação), troque SEVERE por FINE na linha .sql abaixo.
+                 Com FINE, avisos de "Duplicate key/foreign key" ao iniciar são normais: o EclipseLink
+                 tenta recriar constraints que já existem e ignora o erro. -->
+            <property name="eclipselink.logging.level" value="SEVERE"/>
+            <property name="eclipselink.logging.level.sql" value="SEVERE"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
+        </properties>
+    </persistence-unit>
+</persistence>

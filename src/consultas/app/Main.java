@@ -1,6 +1,7 @@
 package consultas.app;
 
 import consultas.agenda.Agenda;
+import consultas.dao.JPAUtil;
 import consultas.facade.AgendamentoFacade;
 import consultas.notificacao.NotificadorPaciente;
 import consultas.notificacao.PublicadorAgendamento;
@@ -27,6 +28,10 @@ public class Main {
         // Facade: recebe todas as peças pelo construtor
         AgendamentoFacade facade = new AgendamentoFacade(dados, agenda, cadeia, publicador);
 
-        new MenuConsole(facade, publicador, notificador).iniciar();
+        try {
+            new MenuConsole(facade, publicador, notificador).iniciar();
+        } finally {
+            JPAUtil.fechar(); // fecha a conexão com o banco ao sair
+        }
     }
 }
