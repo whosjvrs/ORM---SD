@@ -1,41 +1,38 @@
 package consultas.agenda;
 
+import consultas.dao.HorarioDAO;
+import consultas.modelo.AgendamentoException;
 import consultas.modelo.Clinica;
 import consultas.modelo.HorarioAtendimento;
 import consultas.modelo.Psicologo;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Guarda os horários de atendimento e controla as reservas.
- * É um dos subsistemas coordenados pela AgendamentoFacade.
+ * Subsistema de horários coordenado pela AgendamentoFacade.
+ *
+ * RA3: deixou de guardar uma lista em memória e passou a consultar o banco pelo HorarioDAO.
+ * A reserva em si acontece dentro de ConsultaDAO.registrar, na mesma transação da consulta (regra 4).
  */
 public class Agenda {
 
-    private final List<HorarioAtendimento> horarios = new ArrayList<>();
+    private final HorarioDAO horarioDAO = new HorarioDAO();
 
-    public void adicionar(HorarioAtendimento horario) {
-        horarios.add(horario);
-    }
-
-    /** Horários livres e futuros daquela clínica e daquele psicólogo. Devolve sempre uma lista nova. */
+    /** Horários livres e futuros daquela clínica e daquele psicólogo (consulta JPQL). */
     public List<HorarioAtendimento> listarDisponiveis(Clinica clinica, Psicologo psicologo) {
-        LocalDateTime agora = LocalDateTime.now();
-        List<HorarioAtendimento> disponiveis = new ArrayList<>();
-        for (HorarioAtendimento h : horarios) {
-            if (h.getClinica() == clinica && h.getPsicologo() == psicologo
-                    && !h.isReservado() && h.getInicio().isAfter(agora)) {
-                disponiveis.add(h);
-            }
-        }
-        return disponiveis;
+        return horarioDAO.listarDisponiveis(clinica, psicologo);
     }
 
-    /** Marca o horário como reservado. Protege contra reservar duas vezes. */
-    public void reservar(HorarioAtendimento horario) {
-        horario.reservar(); // lança AgendamentoException se já estiver reservado
-        System.out.println("[Agenda] Horário " + horario.getId() + " reservado.");
+    /**
+     * Busca o horário de novo no banco. O objeto que veio do menu pode estar desatualizado
+     * (ex.: outra opção do menu reservou o horário depois que ele foi listado); a validação
+     * precisa olhar o estado atual.
+     */
+    public HorarioAtendimento atualizar(HorarioAtendimento horario) {
+        HorarioAtendimento atual = horarioDAO.buscarPorId(horario.getId());
+        if (atual == null) {
+            throw new AgendamentoException("Horário " + horario.getId() + " não existe mais.");
+        }
+        return atual;
     }
 }

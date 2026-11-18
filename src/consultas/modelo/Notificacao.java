@@ -82,6 +82,7 @@ public class Notificacao {
 
     @Override
     public String toString() {
-        return "[" + id + "] " + dataHora.format(FORMATO) + " " + tipo + (lida ? " (lida)" : "") + " - " + mensagem;
+        return "[" + id + "] " + dataHora.format(FORMATO) + " " + tipo + (lida ? " (lida)" : "")
+                + " | consulta " + consulta.getId() + " - " + mensagem;
     }
 }

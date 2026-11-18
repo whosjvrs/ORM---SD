@@ -93,6 +93,14 @@ public class Consulta {
         horario.liberar();
     }
 
+    /** A consulta aconteceu. O horário continua reservado. */
+    public void marcarRealizada() {
+        if (status != StatusConsulta.AGENDADA) {
+            throw new AgendamentoException("Só consultas AGENDADAS podem ser marcadas como realizadas.");
+        }
+        status = StatusConsulta.REALIZADA;
+    }
+
     public List<Notificacao> getNotificacoes() { return new ArrayList<>(notificacoes); }
 
     /** Chamado pela Notificacao para manter os dois lados coerentes. */

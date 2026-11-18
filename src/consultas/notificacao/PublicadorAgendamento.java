@@ -5,6 +5,7 @@ import consultas.modelo.Consulta;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Observer — Subject: guarda os observadores e repassa os eventos. */
 public class PublicadorAgendamento {
     private final List<ObservadorAgendamento> observadores = new ArrayList<>();
 
@@ -25,6 +26,12 @@ public class PublicadorAgendamento {
     public void notificar(Consulta consulta) {
         for (ObservadorAgendamento o : observadores) {
             o.aoAgendar(consulta);
+        }
+    }
+
+    public void notificarCancelamento(Consulta consulta) {
+        for (ObservadorAgendamento o : observadores) {
+            o.aoCancelar(consulta);
         }
     }
 }
