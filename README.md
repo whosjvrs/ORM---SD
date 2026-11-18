@@ -67,7 +67,7 @@ No `persistence.xml`, troque `SEVERE` por `FINE` em `eclipselink.logging.level.s
 | Negócio | `consultas.validacao` | Chain of Responsibility |
 | Negócio | `consultas.estrategia` | Strategy |
 | Negócio | `consultas.notificacao` | Observer |
-| Dados | `consultas.dao` | `JPAUtil`, `GenericDAO<T>` e DAOs específicos |
+| Dados | `consultas.dao` | `JPAUtil`, `GenericDAO<T>` e os DAOs específicos (`ClinicaDAO`, `PacienteDAO`, `PsicologoDAO`, `EspecialidadeDAO`, `HorarioDAO`, `ConsultaDAO`, `NotificacaoDAO`) |
 | Modelo | `consultas.modelo` | 8 entidades, enums e `AgendamentoException` |
 | Teste | `consultas.teste` | `TesteMapeamento` |
 | Configuração | `src/META-INF` | `persistence.xml` |
@@ -90,13 +90,35 @@ Tabelas de junção: `psicologo_clinica` e `psicologo_especialidade`.
 ## Menu
 
 ```
-1 - Agendar consulta
+1 - Agendar consulta                  (Facade + Strategy + Chain + Observer)
 2 - Listar consultas
-3 - Ligar/desligar notificação ao paciente
-4 - Demonstrar validação
-5 - Cadastros (CRUD)
+3 - Cancelar consulta                 (libera o horário e notifica o paciente)
+4 - Histórico de notificações de uma consulta
+5 - Ligar/desligar notificação ao paciente   (demonstra o Observer)
+6 - Demonstrar validação              (a Chain barra o horário já reservado)
+7 - Cadastros (CRUD)                  (cadastrar, listar, buscar, atualizar e excluir das 8 entidades)
 0 - Sair
 ```
+
+Na primeira execução, com o banco vazio, o sistema grava os dados de exemplo
+(2 clínicas, 3 especialidades, 3 psicólogos, 2 pacientes e 8 horários a partir de 2 dias depois).
+Para recomeçar do zero: `DROP DATABASE clinica_psico;` no MySQL e rodar de novo.
+
+## Regras de negócio
+
+| Nº | Regra | Onde |
+|---|---|---|
+| 1 | O psicólogo precisa atender na clínica do horário | `ValidadorVinculo` (Chain) |
+| 2 | Só horários futuros podem ser agendados | `ValidadorDataFutura` (Chain) |
+| 3 | Horário reservado não pode ser reservado de novo | `ValidadorDisponibilidade` (Chain) e `HorarioAtendimento.reservar` |
+| 4 | Reserva e registro da consulta na mesma transação (rollback se falhar) | `ConsultaDAO.registrar` |
+| 5 | A notificação é gravada depois do registro da consulta | `AgendamentoFacade` + `NotificadorPaciente` (Observer) |
+| 6 | Consultas duram 50 minutos | `HorarioAtendimento.DURACAO_MINUTOS` |
+| 7 | Cancelar muda o status, libera o horário e gera notificação | `Consulta.cancelar`, `ConsultaDAO.cancelar` |
+| 8 | Horário reservado não pode ser alterado nem excluído | `HorarioAtendimento.setInicio`, `HorarioDAO.remover` |
+| 9 | Não se exclui clínica, psicólogo ou paciente com horários ou consultas | `remover` dos DAOs específicos |
+| 10 | CPF, CRP e nome da especialidade são únicos | `existeCpf`, `existeCrp`, `existeNome` + `unique` no mapeamento |
+| — | O paciente não pode ter duas consultas agendadas no mesmo horário | `ValidadorConflitoPaciente` (Chain, novo no RA3) |
 
 ## Como a equipe trabalha
 

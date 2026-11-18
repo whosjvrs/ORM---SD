@@ -60,11 +60,6 @@ public abstract class MenuCrud {
 
     protected abstract void excluir();
 
-    /** Mensagem usada enquanto uma operação não foi implementada. */
-    protected void emConstrucao() {
-        System.out.println("(em construção)");
-    }
-
     private static Throwable causaRaiz(Throwable e) {
         Throwable atual = e;
         while (atual.getCause() != null && atual.getCause() != atual) {

@@ -1,6 +1,6 @@
 package consultas.app;
 
-import consultas.modelo.HorarioAtendimento;
+import consultas.app.cadastro.MenuCadastros;
 import consultas.estrategia.EstrategiaOrdenacao;
 import consultas.estrategia.OrdemCronologica;
 import consultas.estrategia.PreferenciaTurno;
@@ -9,26 +9,27 @@ import consultas.facade.AgendamentoFacade;
 import consultas.modelo.AgendamentoException;
 import consultas.modelo.Clinica;
 import consultas.modelo.Consulta;
+import consultas.modelo.HorarioAtendimento;
 import consultas.modelo.Paciente;
 import consultas.modelo.Psicologo;
 import consultas.notificacao.NotificadorPaciente;
 import consultas.notificacao.PublicadorAgendamento;
 
-import consultas.app.cadastro.MenuCadastros;
-
 import java.util.List;
 
+/** Menu principal (camada de apresentação). Só conversa com a fachada e com o menu de cadastros. */
 public class MenuConsole {
     private final AgendamentoFacade facade;
     private final PublicadorAgendamento publicador;
     private final NotificadorPaciente notificador;
-    private final MenuCadastros cadastros = new MenuCadastros();
+    private final MenuCadastros cadastros;
 
     public MenuConsole(AgendamentoFacade facade, PublicadorAgendamento publicador,
                        NotificadorPaciente notificador) {
         this.facade = facade;
         this.publicador = publicador;
         this.notificador = notificador;
+        this.cadastros = new MenuCadastros(facade);
     }
 
     public void iniciar() {
@@ -38,53 +39,49 @@ public class MenuConsole {
             System.out.println("===== Agendamento de Consultas =====");
             System.out.println("1 - Agendar consulta");
             System.out.println("2 - Listar consultas");
-            System.out.println("3 - Ligar/desligar notificação ao paciente");
-            System.out.println("4 - Demonstrar validação: tentar agendar de novo o horário da última consulta");
-            System.out.println("5 - Cadastros (CRUD)");
+            System.out.println("3 - Cancelar consulta");
+            System.out.println("4 - Histórico de notificações de uma consulta");
+            System.out.println("5 - Ligar/desligar notificação ao paciente");
+            System.out.println("6 - Demonstrar validação: tentar agendar de novo o horário da última consulta");
+            System.out.println("7 - Cadastros (CRUD)");
             System.out.println("0 - Sair");
-            opcao = lerNumero("Escolha uma opção: ", 0, 5);
+            opcao = lerNumero("Escolha uma opção: ", 0, 7);
 
             try {
                 switch (opcao) {
                     case 1 -> agendarConsulta();
                     case 2 -> listarConsultas();
-                    case 3 -> alternarNotificacao();
-                    case 4 -> demonstrarValidacao();
-                    case 5 -> cadastros.exibir();
+                    case 3 -> cancelarConsulta();
+                    case 4 -> historicoNotificacoes();
+                    case 5 -> alternarNotificacao();
+                    case 6 -> demonstrarValidacao();
+                    case 7 -> cadastros.exibir();
                     case 0 -> System.out.println("Encerrando o sistema.");
                 }
             } catch (AgendamentoException e) {
                 System.out.println("Erro: " + e.getMessage());
+            } catch (RuntimeException e) {
+                System.out.println("Erro ao acessar o banco: " + e.getMessage());
             }
         } while (opcao != 0);
     }
 
-    // Opção 1: segue o fluxo da seção 2 do guia
+    // Opção 1: fluxo do RA2 — paciente, clínica, psicólogo, ordenação, horário
     private void agendarConsulta() {
-        List<Paciente> pacientes = facade.listarPacientes();
-        System.out.println("\nPacientes:");
-        for (int i = 0; i < pacientes.size(); i++) {
-            System.out.println((i + 1) + " - " + pacientes.get(i).getNome());
+        Paciente paciente = Console.escolher("Pacientes", facade.listarPacientes());
+        if (paciente == null) {
+            return;
         }
-        Paciente paciente = pacientes.get(lerNumero("Escolha o paciente: ", 1, pacientes.size()) - 1);
-
-        List<Clinica> clinicas = facade.listarClinicas();
-        System.out.println("\nClínicas:");
-        for (int i = 0; i < clinicas.size(); i++) {
-            System.out.println((i + 1) + " - " + clinicas.get(i).getNome());
+        Clinica clinica = Console.escolher("Clínicas", facade.listarClinicas());
+        if (clinica == null) {
+            return;
         }
-        Clinica clinica = clinicas.get(lerNumero("Escolha a clínica: ", 1, clinicas.size()) - 1);
-
         List<Psicologo> psicologos = facade.listarPsicologosDaClinica(clinica);
         if (psicologos.isEmpty()) {
             System.out.println("Nenhum psicólogo atende nesta clínica.");
             return;
         }
-        System.out.println("\nPsicólogos da " + clinica.getNome() + ":");
-        for (int i = 0; i < psicologos.size(); i++) {
-            System.out.println((i + 1) + " - " + psicologos.get(i).getNome());
-        }
-        Psicologo psicologo = psicologos.get(lerNumero("Escolha o psicólogo: ", 1, psicologos.size()) - 1);
+        Psicologo psicologo = Console.escolher("Psicólogos da " + clinica.getNome(), psicologos);
 
         EstrategiaOrdenacao estrategia = escolherEstrategia();
 
@@ -93,11 +90,7 @@ public class MenuConsole {
             System.out.println("Nenhum horário disponível.");
             return;
         }
-        System.out.println("\nHorários disponíveis:");
-        for (int i = 0; i < horarios.size(); i++) {
-            System.out.println((i + 1) + " - " + horarios.get(i));
-        }
-        HorarioAtendimento horario = horarios.get(lerNumero("Escolha o horário: ", 1, horarios.size()) - 1);
+        HorarioAtendimento horario = Console.escolher("Horários disponíveis", horarios);
 
         facade.agendar(paciente, horario);
     }
@@ -135,7 +128,24 @@ public class MenuConsole {
         }
     }
 
-    // Opção 3: demonstração do Observer (remover / inscrever)
+    // Opção 3: só as consultas AGENDADAS podem ser canceladas
+    private void cancelarConsulta() {
+        Consulta consulta = Console.escolher("Consultas agendadas", facade.listarConsultasAgendadas());
+        if (consulta != null && Console.confirmar("Confirma o cancelamento?")) {
+            facade.cancelar(consulta);
+        }
+    }
+
+    // Opção 4: notificações gravadas pelo Observer
+    private void historicoNotificacoes() {
+        Consulta consulta = Console.escolher("Consultas", facade.listarConsultas());
+        if (consulta != null) {
+            System.out.println("\nNotificações da consulta " + consulta.getId() + ":");
+            Console.imprimir(facade.listarNotificacoes(consulta));
+        }
+    }
+
+    // Opção 5: demonstração do Observer (remover / inscrever)
     private void alternarNotificacao() {
         if (publicador.estaInscrito(notificador)) {
             publicador.remover(notificador);
@@ -146,9 +156,9 @@ public class MenuConsole {
         }
     }
 
-    // Opção 4: demonstração do Chain (para no ValidadorDisponibilidade)
+    // Opção 6: demonstração do Chain (para no ValidadorDisponibilidade)
     private void demonstrarValidacao() {
-        List<Consulta> consultas = facade.listarConsultas();
+        List<Consulta> consultas = facade.listarConsultasAgendadas();
         if (consultas.isEmpty()) {
             System.out.println("Agende uma consulta primeiro (opção 1).");
             return;

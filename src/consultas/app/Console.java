@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -81,6 +82,75 @@ public final class Console {
                 return LocalDateTime.parse(SCANNER.nextLine().trim(), DATA_HORA);
             } catch (DateTimeParseException e) {
                 System.out.println("Data/hora inválida.");
+            }
+        }
+    }
+
+    /** Data opcional (dd/MM/yyyy). Enter mantém o valor atual (usado no "atualizar"). */
+    public static LocalDate lerDataOpcional(String pergunta, LocalDate valorAtual) {
+        while (true) {
+            System.out.print(pergunta + " (dd/MM/aaaa) [" + (valorAtual == null ? "" : valorAtual.format(DATA)) + "]: ");
+            String linha = SCANNER.nextLine().trim();
+            if (linha.isEmpty()) {
+                return valorAtual;
+            }
+            try {
+                return LocalDate.parse(linha, DATA);
+            } catch (DateTimeParseException e) {
+                System.out.println("Data inválida.");
+            }
+        }
+    }
+
+    /** Data e hora opcionais (dd/MM/yyyy HH:mm). Enter mantém o valor atual. */
+    public static LocalDateTime lerDataHoraOpcional(String pergunta, LocalDateTime valorAtual) {
+        while (true) {
+            System.out.print(pergunta + " (dd/MM/aaaa HH:mm) [" + valorAtual.format(DATA_HORA) + "]: ");
+            String linha = SCANNER.nextLine().trim();
+            if (linha.isEmpty()) {
+                return valorAtual;
+            }
+            try {
+                return LocalDateTime.parse(linha, DATA_HORA);
+            } catch (DateTimeParseException e) {
+                System.out.println("Data/hora inválida.");
+            }
+        }
+    }
+
+    /**
+     * Escolha de vários itens de uma lista, digitando os números separados por vírgula (ex.: 1,3).
+     * Enter sem nada devolve uma lista vazia.
+     */
+    public static <T> List<T> escolherVarios(String titulo, List<T> itens) {
+        if (itens.isEmpty()) {
+            System.out.println("Nenhum item cadastrado em " + titulo + ".");
+            return new ArrayList<>();
+        }
+        System.out.println("\n" + titulo + ":");
+        for (int i = 0; i < itens.size(); i++) {
+            System.out.println((i + 1) + " - " + itens.get(i));
+        }
+        while (true) {
+            System.out.print("Números separados por vírgula (Enter para nenhum): ");
+            String linha = SCANNER.nextLine().trim();
+            List<T> escolhidos = new ArrayList<>();
+            if (linha.isEmpty()) {
+                return escolhidos;
+            }
+            try {
+                for (String parte : linha.split(",")) {
+                    int n = Integer.parseInt(parte.trim());
+                    if (n < 1 || n > itens.size()) {
+                        throw new NumberFormatException();
+                    }
+                    if (!escolhidos.contains(itens.get(n - 1))) {
+                        escolhidos.add(itens.get(n - 1));
+                    }
+                }
+                return escolhidos;
+            } catch (NumberFormatException e) {
+                System.out.println("Entrada inválida. Use números entre 1 e " + itens.size() + ", separados por vírgula.");
             }
         }
     }
