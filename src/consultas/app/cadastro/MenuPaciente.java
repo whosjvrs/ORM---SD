@@ -5,19 +5,13 @@ import consultas.dao.ConsultaDAO;
 import consultas.dao.PacienteDAO;
 import consultas.modelo.Paciente;
 
-import java.time.LocalDate;
+/** CRUD de Paciente (subclasse de Pessoa: grava nas tabelas "pessoa" e "paciente"). */
+public class MenuPaciente extends MenuCrud<Paciente, PacienteDAO> {
 
-/**
- * CRUD de Paciente (subclasse de Pessoa: grava em "pessoa" e em "paciente").
- * Segue a estrutura de MenuClinica (modelo de referência).
- */
-public class MenuPaciente extends MenuCrud {
-
-    private final PacienteDAO dao = new PacienteDAO();
     private final ConsultaDAO consultaDAO = new ConsultaDAO();
 
     public MenuPaciente() {
-        super("Pacientes");
+        super("Pacientes", "do paciente", new PacienteDAO());
     }
 
     @Override
@@ -28,25 +22,15 @@ public class MenuPaciente extends MenuCrud {
             System.out.println("Já existe um paciente com o CPF " + cpf + ".");
             return;
         }
-        String email = Console.lerTexto("E-mail: ");
-        String telefone = Console.lerTexto("Telefone: ");
-        LocalDate nascimento = Console.lerData("Data de nascimento");
-        Paciente paciente = dao.salvar(new Paciente(nome, cpf, email, telefone, nascimento));
+        Paciente paciente = dao.salvar(new Paciente(nome, cpf,
+                Console.lerTexto("E-mail: "),
+                Console.lerTexto("Telefone: "),
+                Console.lerData("Data de nascimento")));
         System.out.println("Paciente cadastrado com id " + paciente.getId() + ".");
     }
 
     @Override
-    protected void listar() {
-        Console.imprimir(dao.listarTodos());
-    }
-
-    @Override
-    protected void buscar() {
-        Paciente paciente = dao.buscarPorId(Console.lerId("Id do paciente: "));
-        if (paciente == null) {
-            System.out.println("Paciente não encontrado.");
-            return;
-        }
+    protected void detalhar(Paciente paciente) {
         System.out.println(paciente);
         System.out.println("   E-mail: " + paciente.getEmail() + " | Telefone: " + paciente.getTelefone()
                 + " | Nascimento: " + (paciente.getDataNascimento() == null ? "-"
@@ -56,34 +40,17 @@ public class MenuPaciente extends MenuCrud {
     }
 
     @Override
-    protected void atualizar() {
-        Paciente paciente = dao.buscarPorId(Console.lerId("Id do paciente: "));
-        if (paciente == null) {
-            System.out.println("Paciente não encontrado.");
-            return;
-        }
-        System.out.println("Enter mantém o valor atual.");
-        paciente.setNome(Console.lerTextoOpcional("Nome", paciente.getNome()));
+    protected boolean editar(Paciente paciente) {
         String cpf = Console.lerTextoOpcional("CPF", paciente.getCpf());
         if (dao.existeCpf(cpf, paciente.getId())) {
             System.out.println("Já existe outro paciente com o CPF " + cpf + ".");
-            return;
+            return false;
         }
         paciente.setCpf(cpf);
+        paciente.setNome(Console.lerTextoOpcional("Nome", paciente.getNome()));
         paciente.setEmail(Console.lerTextoOpcional("E-mail", paciente.getEmail()));
         paciente.setTelefone(Console.lerTextoOpcional("Telefone", paciente.getTelefone()));
         paciente.setDataNascimento(Console.lerDataOpcional("Data de nascimento", paciente.getDataNascimento()));
-        dao.atualizar(paciente); // objeto desanexado: o merge grava as mudanças
-        System.out.println("Paciente atualizado.");
-    }
-
-    @Override
-    protected void excluir() {
-        Long id = Console.lerId("Id do paciente: ");
-        if (!Console.confirmar("Confirma a exclusão?")) {
-            return;
-        }
-        // PacienteDAO.remover aplica a regra 9 (paciente com consultas não é excluído).
-        System.out.println(dao.remover(id) ? "Paciente excluído." : "Paciente não encontrado.");
+        return true;
     }
 }

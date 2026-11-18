@@ -1,5 +1,7 @@
 package consultas.dao;
 
+import consultas.modelo.AgendamentoException;
+
 import java.util.List;
 
 /**
@@ -56,5 +58,41 @@ public class GenericDAO<T> {
     public long contar() {
         String jpql = "SELECT COUNT(e) FROM " + classe.getSimpleName() + " e";
         return JPAUtil.consultar(em -> em.createQuery(jpql, Long.class).getSingleResult());
+    }
+
+    // ---------- Auxiliares usados pelos DAOs específicos ----------
+
+    /**
+     * Regra de campo único (regra 10): existe OUTRO registro com atributo = valor?
+     * ignorarId é o próprio registro no "atualizar" (no "cadastrar", passe null).
+     * Ex.: existeOutro("cpf", "111.111.111-11", null)
+     */
+    protected boolean existeOutro(String atributo, Object valor, Long ignorarId) {
+        String jpql = "SELECT COUNT(e) FROM " + classe.getSimpleName() + " e WHERE e." + atributo + " = :valor"
+                + " AND (:ignorar IS NULL OR e.id <> :ignorar)";
+        return JPAUtil.consultar(em -> em.createQuery(jpql, Long.class)
+                .setParameter("valor", valor)
+                .setParameter("ignorar", ignorarId)
+                .getSingleResult()) > 0;
+    }
+
+    /** Executa uma contagem JPQL que tem um único parâmetro, chamado :id. */
+    protected static long contar(String jpql, Long id) {
+        return JPAUtil.consultar(em -> em.createQuery(jpql, Long.class)
+                .setParameter("id", id)
+                .getSingleResult());
+    }
+
+    /**
+     * Regra de exclusão (regra 9): se a contagem for maior que zero, impede a operação.
+     * A mensagem recebe a quantidade no lugar de %d.
+     * Ex.: impedirSeExistir("SELECT COUNT(c) FROM Consulta c WHERE c.paciente.id = :id", id,
+     *                       "O paciente tem %d consulta(s) e não pode ser excluído.")
+     */
+    protected static void impedirSeExistir(String jpqlContagem, Long id, String mensagem) {
+        long quantidade = contar(jpqlContagem, id);
+        if (quantidade > 0) {
+            throw new AgendamentoException(String.format(mensagem, quantidade));
+        }
     }
 }

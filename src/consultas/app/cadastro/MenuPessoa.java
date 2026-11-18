@@ -10,18 +10,17 @@ import consultas.modelo.Pessoa;
 /**
  * CRUD de Pessoa, a superclasse abstrata (herança JOINED).
  *
- * Mostra a consulta polimórfica: "SELECT e FROM Pessoa e" traz pacientes e psicólogos juntos,
- * cada um como objeto da sua própria classe. Pessoa não pode ser instanciada, então o
+ * O listar do MenuCrud já mostra a consulta polimórfica: "SELECT e FROM Pessoa e" traz pacientes
+ * e psicólogos juntos, cada um como objeto da sua classe. Pessoa não pode ser instanciada, então o
  * cadastro pergunta o tipo e reaproveita os menus das subclasses.
  */
-public class MenuPessoa extends MenuCrud {
+public class MenuPessoa extends MenuCrud<Pessoa, GenericDAO<Pessoa>> {
 
-    private final GenericDAO<Pessoa> dao = new GenericDAO<>(Pessoa.class);
     private final MenuPaciente menuPaciente;
     private final MenuPsicologo menuPsicologo;
 
     public MenuPessoa(MenuPaciente menuPaciente, MenuPsicologo menuPsicologo) {
-        super("Pessoas (pacientes e psicólogos)");
+        super("Pessoas (pacientes e psicólogos)", "da pessoa", new GenericDAO<>(Pessoa.class));
         this.menuPaciente = menuPaciente;
         this.menuPsicologo = menuPsicologo;
     }
@@ -37,58 +36,40 @@ public class MenuPessoa extends MenuCrud {
         }
     }
 
+    /** Mostra a classe real de cada objeto: o JPA devolve Paciente ou Psicologo, nunca "Pessoa". */
     @Override
     protected void listar() {
         for (Pessoa p : dao.listarTodos()) {
-            System.out.println(tipo(p) + " " + p);
+            System.out.println(p.getClass().getSimpleName() + " " + p);
         }
     }
 
     @Override
-    protected void buscar() {
-        Pessoa pessoa = dao.buscarPorId(Console.lerId("Id da pessoa: "));
-        if (pessoa == null) {
-            System.out.println("Pessoa não encontrada.");
-            return;
-        }
-        System.out.println(tipo(pessoa) + " " + pessoa);
+    protected void detalhar(Pessoa pessoa) {
+        System.out.println(pessoa);
         System.out.println("   E-mail: " + pessoa.getEmail() + " | Telefone: " + pessoa.getTelefone());
     }
 
-    /** Atualiza só os campos comuns, definidos em Pessoa. */
+    /** Só os campos comuns, definidos em Pessoa. */
     @Override
-    protected void atualizar() {
-        Pessoa pessoa = dao.buscarPorId(Console.lerId("Id da pessoa: "));
-        if (pessoa == null) {
-            System.out.println("Pessoa não encontrada.");
-            return;
-        }
-        System.out.println(tipo(pessoa) + " " + pessoa + " — Enter mantém o valor atual.");
+    protected boolean editar(Pessoa pessoa) {
         pessoa.setNome(Console.lerTextoOpcional("Nome", pessoa.getNome()));
         pessoa.setEmail(Console.lerTextoOpcional("E-mail", pessoa.getEmail()));
         pessoa.setTelefone(Console.lerTextoOpcional("Telefone", pessoa.getTelefone()));
-        dao.atualizar(pessoa); // o merge atualiza a tabela pessoa
-        System.out.println("Pessoa atualizada.");
+        return true;
     }
 
-    /** Exclui usando a regra da subclasse (paciente com consultas, psicólogo com horários). */
+    /** Exclui com a regra da subclasse (paciente com consultas, psicólogo com horários). */
     @Override
     protected void excluir() {
-        Pessoa pessoa = dao.buscarPorId(Console.lerId("Id da pessoa: "));
-        if (pessoa == null) {
-            System.out.println("Pessoa não encontrada.");
-            return;
+        Pessoa pessoa = lerExistente();
+        if (pessoa != null && Console.confirmar("Excluir " + pessoa + "?")) {
+            if (pessoa instanceof Paciente) {
+                new PacienteDAO().remover(pessoa.getId());
+            } else {
+                new PsicologoDAO().remover(pessoa.getId());
+            }
+            System.out.println("Registro excluído.");
         }
-        if (!Console.confirmar("Excluir " + tipo(pessoa) + " " + pessoa.getNome() + "?")) {
-            return;
-        }
-        boolean removida = pessoa instanceof Paciente
-                ? new PacienteDAO().remover(pessoa.getId())
-                : new PsicologoDAO().remover(pessoa.getId());
-        System.out.println(removida ? "Pessoa excluída." : "Pessoa não encontrada.");
-    }
-
-    private static String tipo(Pessoa pessoa) {
-        return pessoa instanceof Paciente ? "(Paciente)" : "(Psicólogo)";
     }
 }

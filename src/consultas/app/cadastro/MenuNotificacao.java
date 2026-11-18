@@ -12,14 +12,14 @@ import java.util.List;
 /**
  * CRUD de Notificacao. Normalmente quem cria notificações é o Observer (NotificadorPaciente);
  * aqui também é possível registrar um aviso manual para uma consulta.
+ * O excluir do MenuCrud chama NotificacaoDAO.remover, que respeita o orphanRemoval.
  */
-public class MenuNotificacao extends MenuCrud {
+public class MenuNotificacao extends MenuCrud<Notificacao, NotificacaoDAO> {
 
-    private final NotificacaoDAO dao = new NotificacaoDAO();
     private final ConsultaDAO consultaDAO = new ConsultaDAO();
 
     public MenuNotificacao() {
-        super("Notificações");
+        super("Notificações", "da notificação", new NotificacaoDAO());
     }
 
     @Override
@@ -29,8 +29,7 @@ public class MenuNotificacao extends MenuCrud {
             return;
         }
         TipoNotificacao tipo = Console.escolher("Tipo", List.of(TipoNotificacao.values()));
-        String mensagem = Console.lerTexto("Mensagem: ");
-        Notificacao notificacao = dao.registrar(consulta.getId(), tipo, mensagem);
+        Notificacao notificacao = dao.registrar(consulta.getId(), tipo, Console.lerTexto("Mensagem: "));
         System.out.println("Notificação cadastrada com id " + notificacao.getId() + ".");
     }
 
@@ -39,7 +38,7 @@ public class MenuNotificacao extends MenuCrud {
         System.out.println("1 - Todas");
         System.out.println("2 - De uma consulta");
         if (Console.lerNumero("Escolha: ", 1, 2) == 1) {
-            Console.imprimir(dao.listarTodos());
+            super.listar();
             return;
         }
         Consulta consulta = Console.escolher("Consultas", consultaDAO.listarTodos());
@@ -49,39 +48,17 @@ public class MenuNotificacao extends MenuCrud {
     }
 
     @Override
-    protected void buscar() {
-        Notificacao notificacao = dao.buscarPorId(Console.lerId("Id da notificação: "));
-        if (notificacao == null) {
-            System.out.println("Notificação não encontrada.");
-            return;
-        }
+    protected void detalhar(Notificacao notificacao) {
         System.out.println(notificacao);
         System.out.println("   Paciente: " + notificacao.getConsulta().getPaciente().getNome());
     }
 
     @Override
-    protected void atualizar() {
-        Notificacao notificacao = dao.buscarPorId(Console.lerId("Id da notificação: "));
-        if (notificacao == null) {
-            System.out.println("Notificação não encontrada.");
-            return;
-        }
-        System.out.println("Enter mantém o valor atual.");
+    protected boolean editar(Notificacao notificacao) {
         notificacao.setMensagem(Console.lerTextoOpcional("Mensagem", notificacao.getMensagem()));
         if (!notificacao.isLida() && Console.confirmar("Marcar como lida?")) {
             notificacao.marcarComoLida();
         }
-        dao.atualizar(notificacao);
-        System.out.println("Notificação atualizada.");
-    }
-
-    @Override
-    protected void excluir() {
-        Long id = Console.lerId("Id da notificação: ");
-        if (!Console.confirmar("Confirma a exclusão?")) {
-            return;
-        }
-        // NotificacaoDAO.remover tira a notificação da lista da consulta (orphanRemoval).
-        System.out.println(dao.remover(id) ? "Notificação excluída." : "Notificação não encontrada.");
+        return true;
     }
 }

@@ -12,13 +12,7 @@ public class EspecialidadeDAO extends GenericDAO<Especialidade> {
 
     /** Regra 10: o nome da especialidade é único. */
     public boolean existeNome(String nome, Long ignorarId) {
-        long total = JPAUtil.consultar(em -> em.createQuery(
-                        "SELECT COUNT(e) FROM Especialidade e WHERE LOWER(e.nome) = LOWER(:nome)"
-                                + " AND (:ignorar IS NULL OR e.id <> :ignorar)", Long.class)
-                .setParameter("nome", nome)
-                .setParameter("ignorar", ignorarId)
-                .getSingleResult());
-        return total > 0;
+        return existeOutro("nome", nome, ignorarId);
     }
 
     /**

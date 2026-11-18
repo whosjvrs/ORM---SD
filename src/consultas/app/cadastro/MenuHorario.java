@@ -17,20 +17,17 @@ import java.util.List;
 
 /**
  * CRUD de HorarioAtendimento.
- *
  * Reaproveita dois elos da Chain do RA2 para validar um horário novo ou alterado:
  * o psicólogo precisa atender na clínica e o horário precisa ser futuro.
  */
-public class MenuHorario extends MenuCrud {
+public class MenuHorario extends MenuCrud<HorarioAtendimento, HorarioDAO> {
 
-    private final HorarioDAO dao = new HorarioDAO();
     private final GenericDAO<Clinica> clinicaDAO = new GenericDAO<>(Clinica.class);
     private final PsicologoDAO psicologoDAO = new PsicologoDAO();
-    private final ValidadorAgendamento validacao;
+    private final ValidadorAgendamento validacao = new ValidadorVinculo();
 
     public MenuHorario() {
-        super("Horários de atendimento");
-        validacao = new ValidadorVinculo();
+        super("Horários de atendimento", "do horário", new HorarioDAO());
         validacao.setProximo(new ValidadorDataFutura());
     }
 
@@ -65,45 +62,24 @@ public class MenuHorario extends MenuCrud {
     }
 
     @Override
-    protected void buscar() {
-        HorarioAtendimento horario = dao.buscarPorId(Console.lerId("Id do horário: "));
-        if (horario == null) {
-            System.out.println("Horário não encontrado.");
-            return;
-        }
+    protected void detalhar(HorarioAtendimento horario) {
         System.out.println(horario);
         System.out.println("   Situação: " + (horario.isReservado() ? "reservado" : "livre")
                 + " | Consultas no histórico: " + dao.contarConsultas(horario.getId()));
     }
 
     @Override
-    protected void atualizar() {
-        HorarioAtendimento horario = dao.buscarPorId(Console.lerId("Id do horário: "));
-        if (horario == null) {
-            System.out.println("Horário não encontrado.");
-            return;
-        }
+    protected boolean editar(HorarioAtendimento horario) {
         if (horario.isReservado()) {
             throw new AgendamentoException("Horário reservado não pode ser alterado."); // regra 8
         }
         LocalDateTime inicio = Console.lerDataHoraOpcional("Novo início", horario.getInicio());
         if (dao.existe(horario.getPsicologo(), inicio, horario.getId())) {
             System.out.println("Este psicólogo já tem um horário começando nesse momento.");
-            return;
+            return false;
         }
         horario.setInicio(inicio);
         validacao.validar(null, horario);
-        dao.atualizar(horario);
-        System.out.println("Horário atualizado.");
-    }
-
-    @Override
-    protected void excluir() {
-        Long id = Console.lerId("Id do horário: ");
-        if (!Console.confirmar("Confirma a exclusão?")) {
-            return;
-        }
-        // HorarioDAO.remover aplica a regra 8 (reservado) e bloqueia horário com consultas no histórico.
-        System.out.println(dao.remover(id) ? "Horário excluído." : "Horário não encontrado.");
+        return true;
     }
 }

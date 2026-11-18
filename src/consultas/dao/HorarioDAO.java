@@ -61,10 +61,7 @@ public class HorarioDAO extends GenericDAO<HorarioAtendimento> {
 
     /** Quantas consultas (de qualquer status) já usaram este horário. */
     public long contarConsultas(Long horarioId) {
-        return JPAUtil.consultar(em -> em.createQuery(
-                        "SELECT COUNT(c) FROM Consulta c WHERE c.horario.id = :id", Long.class)
-                .setParameter("id", horarioId)
-                .getSingleResult());
+        return contar("SELECT COUNT(c) FROM Consulta c WHERE c.horario.id = :id", horarioId);
     }
 
     /**
@@ -80,11 +77,8 @@ public class HorarioDAO extends GenericDAO<HorarioAtendimento> {
         if (horario.isReservado()) {
             throw new AgendamentoException("Horário reservado não pode ser excluído. Cancele a consulta antes.");
         }
-        long consultas = contarConsultas(id);
-        if (consultas > 0) {
-            throw new AgendamentoException("O horário tem " + consultas
-                    + " consulta(s) no histórico e não pode ser excluído.");
-        }
+        impedirSeExistir("SELECT COUNT(c) FROM Consulta c WHERE c.horario.id = :id", id,
+                "O horário tem %d consulta(s) no histórico e não pode ser excluído.");
         return super.remover(id);
     }
 }

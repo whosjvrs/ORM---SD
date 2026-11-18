@@ -1,6 +1,5 @@
 package consultas.dao;
 
-import consultas.modelo.AgendamentoException;
 import consultas.modelo.Clinica;
 import consultas.modelo.Especialidade;
 import consultas.modelo.Psicologo;
@@ -29,15 +28,9 @@ public class PsicologoDAO extends GenericDAO<Psicologo> {
                 .getResultList());
     }
 
-    /** Regra 10: CRP é único. ignorarId serve para o "atualizar" não acusar o próprio registro. */
+    /** Regra 10: CRP é único. */
     public boolean existeCrp(String crp, Long ignorarId) {
-        long total = JPAUtil.consultar(em -> em.createQuery(
-                        "SELECT COUNT(p) FROM Psicologo p WHERE p.crp = :crp AND (:ignorar IS NULL OR p.id <> :ignorar)",
-                        Long.class)
-                .setParameter("crp", crp)
-                .setParameter("ignorar", ignorarId)
-                .getSingleResult());
-        return total > 0;
+        return existeOutro("crp", crp, ignorarId);
     }
 
     /**
@@ -48,12 +41,7 @@ public class PsicologoDAO extends GenericDAO<Psicologo> {
     public void definirVinculos(Long psicologoId, List<Clinica> clinicas, List<Especialidade> especialidades) {
         JPAUtil.emTransacao(em -> {
             Psicologo psicologo = em.find(Psicologo.class, psicologoId);
-            for (Clinica c : psicologo.getClinicas()) {
-                psicologo.desvincular(c);
-            }
-            for (Especialidade e : psicologo.getEspecialidades()) {
-                psicologo.removerEspecialidade(e);
-            }
+            limparVinculos(psicologo);
             for (Clinica c : clinicas) {
                 psicologo.vincular(em.find(Clinica.class, c.getId()));
             }
@@ -67,26 +55,22 @@ public class PsicologoDAO extends GenericDAO<Psicologo> {
     /** Regra 9: não exclui psicólogo com horários. Os vínculos N:N são desfeitos na mesma transação. */
     @Override
     public boolean remover(Long id) {
-        long horarios = JPAUtil.consultar(em -> em.createQuery(
-                        "SELECT COUNT(h) FROM HorarioAtendimento h WHERE h.psicologo.id = :id", Long.class)
-                .setParameter("id", id)
-                .getSingleResult());
-        if (horarios > 0) {
-            throw new AgendamentoException("O psicólogo tem " + horarios + " horário(s) cadastrados. Remova-os antes.");
-        }
+        impedirSeExistir("SELECT COUNT(h) FROM HorarioAtendimento h WHERE h.psicologo.id = :id", id,
+                "O psicólogo tem %d horário(s) cadastrados. Remova-os antes.");
         return JPAUtil.emTransacao(em -> {
             Psicologo psicologo = em.find(Psicologo.class, id);
             if (psicologo == null) {
                 return false;
             }
-            for (Clinica c : psicologo.getClinicas()) {
-                psicologo.desvincular(c);
-            }
-            for (Especialidade e : psicologo.getEspecialidades()) {
-                psicologo.removerEspecialidade(e);
-            }
+            limparVinculos(psicologo);
             em.remove(psicologo);
             return true;
         });
+    }
+
+    /** Desfaz os dois N:N pelos métodos da entidade, que mantêm os dois lados coerentes. */
+    private static void limparVinculos(Psicologo psicologo) {
+        psicologo.getClinicas().forEach(psicologo::desvincular);
+        psicologo.getEspecialidades().forEach(psicologo::removerEspecialidade);
     }
 }

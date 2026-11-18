@@ -8,7 +8,7 @@ import java.util.List;
 /** Submenu com o CRUD de cada entidade mapeada. */
 public class MenuCadastros {
 
-    private final List<MenuCrud> menus;
+    private final List<MenuCrud<?, ?>> menus;
 
     /** A fachada é usada pelo CRUD de Consulta, para que agendar e cancelar passem pela Chain e pelo Observer. */
     public MenuCadastros(AgendamentoFacade facade) {

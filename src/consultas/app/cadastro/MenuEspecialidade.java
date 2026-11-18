@@ -5,17 +5,13 @@ import consultas.dao.EspecialidadeDAO;
 import consultas.dao.PsicologoDAO;
 import consultas.modelo.Especialidade;
 
-/**
- * CRUD de Especialidade (lado inverso do N:N com Psicologo).
- * Segue a estrutura de MenuClinica (modelo de referência).
- */
-public class MenuEspecialidade extends MenuCrud {
+/** CRUD de Especialidade (lado inverso do N:N com Psicologo). */
+public class MenuEspecialidade extends MenuCrud<Especialidade, EspecialidadeDAO> {
 
-    private final EspecialidadeDAO dao = new EspecialidadeDAO();
     private final PsicologoDAO psicologoDAO = new PsicologoDAO();
 
     public MenuEspecialidade() {
-        super("Especialidades");
+        super("Especialidades", "da especialidade", new EspecialidadeDAO());
     }
 
     @Override
@@ -25,23 +21,12 @@ public class MenuEspecialidade extends MenuCrud {
             System.out.println("Já existe uma especialidade com esse nome.");
             return;
         }
-        String descricao = Console.lerTexto("Descrição: ");
-        Especialidade especialidade = dao.salvar(new Especialidade(nome, descricao));
+        Especialidade especialidade = dao.salvar(new Especialidade(nome, Console.lerTexto("Descrição: ")));
         System.out.println("Especialidade cadastrada com id " + especialidade.getId() + ".");
     }
 
     @Override
-    protected void listar() {
-        Console.imprimir(dao.listarTodos());
-    }
-
-    @Override
-    protected void buscar() {
-        Especialidade especialidade = dao.buscarPorId(Console.lerId("Id da especialidade: "));
-        if (especialidade == null) {
-            System.out.println("Especialidade não encontrada.");
-            return;
-        }
+    protected void detalhar(Especialidade especialidade) {
         System.out.println(especialidade);
         System.out.println("   Descrição: " + especialidade.getDescricao());
         System.out.println("   Psicólogos:");
@@ -49,31 +34,14 @@ public class MenuEspecialidade extends MenuCrud {
     }
 
     @Override
-    protected void atualizar() {
-        Especialidade especialidade = dao.buscarPorId(Console.lerId("Id da especialidade: "));
-        if (especialidade == null) {
-            System.out.println("Especialidade não encontrada.");
-            return;
-        }
-        System.out.println("Enter mantém o valor atual.");
+    protected boolean editar(Especialidade especialidade) {
         String nome = Console.lerTextoOpcional("Nome", especialidade.getNome());
         if (dao.existeNome(nome, especialidade.getId())) {
             System.out.println("Já existe outra especialidade com esse nome.");
-            return;
+            return false;
         }
         especialidade.setNome(nome);
         especialidade.setDescricao(Console.lerTextoOpcional("Descrição", especialidade.getDescricao()));
-        dao.atualizar(especialidade);
-        System.out.println("Especialidade atualizada.");
-    }
-
-    @Override
-    protected void excluir() {
-        Long id = Console.lerId("Id da especialidade: ");
-        if (!Console.confirmar("Confirma a exclusão? Ela será retirada dos psicólogos que a têm.")) {
-            return;
-        }
-        // EspecialidadeDAO.remover desfaz os vínculos N:N antes de apagar.
-        System.out.println(dao.remover(id) ? "Especialidade excluída." : "Especialidade não encontrada.");
+        return true;
     }
 }

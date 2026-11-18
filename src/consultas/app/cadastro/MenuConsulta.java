@@ -12,20 +12,19 @@ import consultas.modelo.Paciente;
 
 /**
  * CRUD de Consulta.
- *
  * Cadastrar e cancelar passam pela fachada, para que a cadeia de validação (Chain) e a
- * notificação (Observer) do RA2 também valham aqui. As demais operações usam o ConsultaDAO.
+ * notificação (Observer) do RA2 também valham aqui. O excluir usa o ConsultaDAO
+ * (as notificações vão junto por cascade e, se AGENDADA, o horário é liberado).
  */
-public class MenuConsulta extends MenuCrud {
+public class MenuConsulta extends MenuCrud<Consulta, ConsultaDAO> {
 
     private final AgendamentoFacade facade;
-    private final ConsultaDAO dao = new ConsultaDAO();
     private final PacienteDAO pacienteDAO = new PacienteDAO();
     private final HorarioDAO horarioDAO = new HorarioDAO();
     private final NotificacaoDAO notificacaoDAO = new NotificacaoDAO();
 
     public MenuConsulta(AgendamentoFacade facade) {
-        super("Consultas");
+        super("Consultas", "da consulta", new ConsultaDAO());
         this.facade = facade;
     }
 
@@ -33,15 +32,12 @@ public class MenuConsulta extends MenuCrud {
     @Override
     protected void cadastrar() {
         Paciente paciente = Console.escolher("Pacientes", pacienteDAO.listarTodos());
-        if (paciente == null) {
-            return;
+        HorarioAtendimento horario = paciente == null ? null
+                : Console.escolher("Horários disponíveis", horarioDAO.listarTodosDisponiveis());
+        if (horario != null) {
+            Consulta consulta = facade.agendar(paciente, horario);
+            System.out.println("Consulta cadastrada com id " + consulta.getId() + ".");
         }
-        HorarioAtendimento horario = Console.escolher("Horários disponíveis", horarioDAO.listarTodosDisponiveis());
-        if (horario == null) {
-            return;
-        }
-        Consulta consulta = facade.agendar(paciente, horario);
-        System.out.println("Consulta cadastrada com id " + consulta.getId() + ".");
     }
 
     @Override
@@ -49,7 +45,7 @@ public class MenuConsulta extends MenuCrud {
         System.out.println("1 - Todas");
         System.out.println("2 - De um paciente");
         if (Console.lerNumero("Escolha: ", 1, 2) == 1) {
-            Console.imprimir(dao.listarTodos());
+            super.listar();
             return;
         }
         Paciente paciente = Console.escolher("Pacientes", pacienteDAO.listarTodos());
@@ -59,12 +55,7 @@ public class MenuConsulta extends MenuCrud {
     }
 
     @Override
-    protected void buscar() {
-        Consulta consulta = dao.buscarPorId(Console.lerId("Id da consulta: "));
-        if (consulta == null) {
-            System.out.println("Consulta não encontrada.");
-            return;
-        }
+    protected void detalhar(Consulta consulta) {
         System.out.println(consulta);
         System.out.println("   Registrada em: " + consulta.getDataRegistro().format(Console.DATA_HORA)
                 + " | Observações: " + (consulta.getObservacoes() == null ? "-" : consulta.getObservacoes()));
@@ -72,13 +63,12 @@ public class MenuConsulta extends MenuCrud {
         Console.imprimir(notificacaoDAO.listarPorConsulta(consulta));
     }
 
+    /**
+     * Só as observações são gravadas pelo merge do MenuCrud (devolve true).
+     * Mudanças de status têm transação própria no DAO/fachada (devolve false: nada a gravar depois).
+     */
     @Override
-    protected void atualizar() {
-        Consulta consulta = dao.buscarPorId(Console.lerId("Id da consulta: "));
-        if (consulta == null) {
-            System.out.println("Consulta não encontrada.");
-            return;
-        }
+    protected boolean editar(Consulta consulta) {
         System.out.println(consulta);
         System.out.println("1 - Alterar observações");
         System.out.println("2 - Marcar como REALIZADA");
@@ -86,8 +76,7 @@ public class MenuConsulta extends MenuCrud {
         switch (Console.lerNumero("Escolha: ", 1, 3)) {
             case 1 -> {
                 consulta.setObservacoes(Console.lerTextoOpcional("Observações", consulta.getObservacoes()));
-                dao.atualizar(consulta);
-                System.out.println("Observações atualizadas.");
+                return true;
             }
             case 2 -> {
                 dao.marcarRealizada(consulta.getId());
@@ -95,15 +84,6 @@ public class MenuConsulta extends MenuCrud {
             }
             default -> facade.cancelar(consulta);
         }
-    }
-
-    @Override
-    protected void excluir() {
-        Long id = Console.lerId("Id da consulta: ");
-        if (!Console.confirmar("Confirma a exclusão? As notificações dela também serão apagadas.")) {
-            return;
-        }
-        // ConsultaDAO.remover: cascade apaga as notificações e, se AGENDADA, libera o horário.
-        System.out.println(dao.remover(id) ? "Consulta excluída." : "Consulta não encontrada.");
+        return false;
     }
 }
