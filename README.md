@@ -120,15 +120,6 @@ Para recomeçar do zero: `DROP DATABASE clinica_psico;` no MySQL e rodar de novo
 | 10 | CPF, CRP e nome da especialidade são únicos | `existeCpf`, `existeCrp`, `existeNome` + `unique` no mapeamento |
 | — | O paciente não pode ter duas consultas agendadas no mesmo horário | `ValidadorConflitoPaciente` (Chain, novo no RA3) |
 
-## Diagrama de classes
-
-Em `docs/diagrama/`:
-
-- `diagrama-de-classes.pdf`: as duas páginas (vetorial)
-- `1-modelo-persistido.png`: as 8 entidades mapeadas, enums, herança e relacionamentos com multiplicidades
-- `2-arquitetura-camadas.png`: as 3 camadas (apresentação, negócio, dados) e os padrões
-- `*.puml`: o código PlantUML. Para regerar: `plantuml -tpng docs/diagrama/*.puml`
-
 ## Como a equipe trabalha
 
 Plano de trabalho e tarefas de cada um: documento "RA3 Clínica Psico: plano de trabalho da equipe".
